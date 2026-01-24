@@ -14,26 +14,31 @@ namespace GameLogger
 
         public static void Postfix()
         {
-#if !ANDROID
-            if (GameLogger.Builder.Length > 0)
+            if (OperatingSystem.IsAndroid())
             {
-                if (!Directory.Exists("GameLogs")) Directory.CreateDirectory("GameLogs");
-                var game = GameLogger.Builder.ToString();
-                File.AppendAllText($"GameLogs\\{DateTime.Now:u}_{Utils.GetMap()}.txt".Replace(":", "-"), game);
-                GameLogger.Builder.Clear();
+                GameLogger.Logger.LogMessage("Android detected, saving logs to persistent data path.");
+                if (GameLogger.Builder.Length > 0)
+                {
+                    var path = Path.GetFullPath("GameLogs", Application.persistentDataPath);
+                    GameLogger.Logger.LogMessage($"android path: {path}");
+                    if (!Directory.Exists(path)) Directory.CreateDirectory(path);
+                    var game = GameLogger.Builder.ToString();
+                    var log = Path.Combine(path, $"{DateTime.Now:u}_{Utils.GetMap()}.txt".Replace(":", "-"));
+                    File.AppendAllText(log, game);
+                    GameLogger.Builder.Clear();
+                }
             }
-#else
-            if (GameLogger.Builder.Length > 0)
+            else
             {
-                var path = Path.GetFullPath("GameLogs", Application.persistentDataPath);
-                GameLogger.Logger.LogMessage($"android path: {path}");
-                if (!Directory.Exists(path)) Directory.CreateDirectory(path);
-                var game = GameLogger.Builder.ToString();
-                var log = Path.Combine(path, $"{DateTime.Now:u}_{Utils.GetMap()}.txt".Replace(":", "-"));
-                File.AppendAllText(log, game);
-                GameLogger.Builder.Clear();
+                GameLogger.Logger.LogMessage("Non-Android detected, saving logs to local GameLogs folder.");
+                if (GameLogger.Builder.Length > 0)
+                {
+                    if (!Directory.Exists("GameLogs")) Directory.CreateDirectory("GameLogs");
+                    var game = GameLogger.Builder.ToString();
+                    File.AppendAllText($"GameLogs\\{DateTime.Now:u}_{Utils.GetMap()}.txt".Replace(":", "-"), game);
+                    GameLogger.Builder.Clear();
+                }
             }
-#endif
             
             TimerLogs.Watch.Reset();
             TaskLogs.State = TaskLogs.TaskStates.None;
